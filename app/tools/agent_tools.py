@@ -21,16 +21,18 @@ class HeliosInput(BaseModel):
 
 _agent_cache = {}
 
-# Module-level storage for current workflow messages.
+# Module-level storage for current workflow messages and state.
 # Set by OrchestratorNode before invoking the react agent so that
 # agent tools have access to the full conversation history.
 _current_messages: list = []
+_current_state: dict = {}
 
 
-def set_current_messages(messages: list) -> None:
-    """Store the current workflow messages for agent tools to access."""
-    global _current_messages
+def set_current_messages(messages: list, state: dict | None = None) -> None:
+    """Store the current workflow messages and state for agent tools to access."""
+    global _current_messages, _current_state
     _current_messages = list(messages)
+    _current_state = dict(state) if state else {}
 
 
 def _get_agent(agent_class):
@@ -46,7 +48,13 @@ def _create_agent_tool_fn(agent_class):
 
     def agent_tool_fn(message: str, context: str = "") -> str:
         agent = _get_agent(agent_class)
-        state = {"messages": _current_messages}
+        state = {
+            "messages": _current_messages,
+            "user_address": _current_state.get("user_address"),
+            "user_latitude": _current_state.get("user_latitude"),
+            "user_longitude": _current_state.get("user_longitude"),
+            "google_earth_link": _current_state.get("google_earth_link"),
+        }
 
         result = asyncio.run(agent.process_query(message, state))
 

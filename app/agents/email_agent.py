@@ -98,6 +98,7 @@ class EmailAgent(BaseAgent):
         
         return "\n".join(context_parts)
 
+
     async def process_query(
         self,
         query: str,
@@ -120,6 +121,16 @@ class EmailAgent(BaseAgent):
                 self.get_result_key(): "No conversation history available to compose email",
                 "error": ["No conversation context"],
             }
+
+        # Get pre-computed Google Earth link from state
+        earth_link = state.get("google_earth_link", "") if state else ""
+        earth_link_instruction = ""
+        if earth_link:
+            earth_link_instruction = (
+                f"\n\nIMPORTANT: Include this Google Earth location link in the email body "
+                f"so the recipient can see the patient's location on a map:\n{earth_link}\n"
+                f"Add it as: Patient Location (Map): {earth_link}"
+            )
         
         # Create a message for the LLM with full conversation
         llm_prompt = f"""Based on this conversation, compose an urgent email requesting alternative healthcare options.
@@ -133,7 +144,7 @@ RULES:
 - If they need hospital beds/ICU/emergency → state they need IMMEDIATE EMERGENCY help for beds
 - If they need medicines/pharmacy → state they seek medications as soon as possible
 - Do NOT include any patient name or regards/sign-off name — just the patient address
-- Be direct and convey urgency
+- Be direct and convey urgency{earth_link_instruction}
 
 IMPORTANT: Return ONLY in this exact format with no additional text:
 SUBJECT|BODY
@@ -147,6 +158,7 @@ Patient Name: John Doe
 Patient Phone: 9876543210
 Patient Address: Shivasunder hospital area, Shastri Nagar, Adyar, Chennai
 Requirement: 1 hospital bed — immediate emergency help needed
+Patient Location (Map): https://earth.google.com/web/@13.0067,80.2206,100a,0d,45y,0h,0t,0r
 
 Please respond at the earliest with available options in this area."""
 
@@ -190,6 +202,10 @@ Please respond at the earliest with available options in this area."""
                     "error": ["USER_EMAIL environment variable not set"],
                 }
             
+            # Ensure the Google Earth link is in the body
+            if earth_link and earth_link not in body:
+                body += f"\n\nPatient Location (Map): {earth_link}"
+
             # Send the email
             logger.info("Sending email", to=user_email, subject=subject)
             result = send_email(user_email, subject, body)

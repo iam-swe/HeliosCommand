@@ -82,8 +82,13 @@ class MedicalShopAgent(BaseAgent):
         api_key = os.environ.get("GOOGLE_MAPS_KEY")
         logger.info("MedicalShopAgent.process_query called", query=query, api_key_available=bool(api_key))
 
-        logger.debug("Calling search_medical_shops_nearby", query=query, api_key_length=len(api_key) if api_key else 0)
-        result = search_medical_shops_nearby(query, api_key)
+        # Get pre-computed address and coordinates from state (set by orchestrator)
+        address = (state.get("user_address") if state else None) or query
+        user_lat = state.get("user_latitude") if state else None
+        user_lng = state.get("user_longitude") if state else None
+
+        logger.debug("Calling search_medical_shops_nearby", address=address, user_lat=user_lat, user_lng=user_lng)
+        result = search_medical_shops_nearby(address, api_key, user_lat=user_lat, user_lng=user_lng)
         
         logger.debug("search_medical_shops_nearby returned", result_keys=list(result.keys()), success=result.get("success"))
 

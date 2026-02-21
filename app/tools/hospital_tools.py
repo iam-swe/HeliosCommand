@@ -11,6 +11,8 @@ from typing import Dict, Any, List, Tuple, Optional
 
 import requests
 
+from app.utils.geo import google_earth_link
+
 
 DATA_CSV = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "chennai_hospitals_dshm.csv"))
 
@@ -63,15 +65,25 @@ def _load_hospitals(csv_path: str) -> List[Dict[str, Any]]:
     return hospitals
 
 
-def find_nearest_hospital(address: str, google_api_key: str) -> Dict[str, Any]:
+def find_nearest_hospital(
+    address: str,
+    google_api_key: str,
+    user_lat: float | None = None,
+    user_lng: float | None = None,
+) -> Dict[str, Any]:
     if not google_api_key:
         raise ValueError("GOOGLE_API_KEY is required")
 
-    coords = _geocode_address(address)
+    # Use pre-computed coordinates if available, otherwise geocode
+    if user_lat is not None and user_lng is not None:
+        coords = (user_lat, user_lng)
+    else:
+        coords = _geocode_address(address)
+
     if coords is None:
         return {"success": False, "error": "Could not geocode address"}
 
-    user_lat, user_lng = coords
+    user_lat_val, user_lng_val = coords
 
     hospitals = _load_hospitals(DATA_CSV)
     if not hospitals:
@@ -80,31 +92,43 @@ def find_nearest_hospital(address: str, google_api_key: str) -> Dict[str, Any]:
     nearest = None
     best_d = float("inf")
     for h in hospitals:
-        d = _haversine(user_lat, user_lng, h["Latitude"], h["Longitude"])
+        d = _haversine(user_lat_val, user_lng_val, h["Latitude"], h["Longitude"])
         if d < best_d:
             best_d = d
             nearest = h
 
     eta_minutes = (best_d / 30.0) * 60.0
+    earth_link = google_earth_link(user_lat_val, user_lng_val)
 
     return {
         "success": True,
-        "user_coords": {"lat": user_lat, "lng": user_lng},
+        "user_coords": {"lat": user_lat_val, "lng": user_lng_val},
         "nearest": nearest,
         "distance_km": round(best_d, 3),
         "eta_minutes": int(round(eta_minutes)),
+        "earth_link": earth_link,
     }
 
 
-def search_medical_shops_nearby(address: str, google_api_key: str, radius_m: int = 2000) -> Dict[str, Any]:
+def search_medical_shops_nearby(
+    address: str,
+    google_api_key: str,
+    radius_m: int = 2000,
+    user_lat: float | None = None,
+    user_lng: float | None = None,
+) -> Dict[str, Any]:
     if not google_api_key:
         raise ValueError("GOOGLE_API_KEY is required")
 
-    coords = _geocode_address(address)
-    if coords is None:
-        return {"success": False, "error": "Could not geocode address"}
+    # Use pre-computed coordinates if available, otherwise geocode
+    if user_lat is not None and user_lng is not None:
+        lat, lng = user_lat, user_lng
+    else:
+        coords = _geocode_address(address)
+        if coords is None:
+            return {"success": False, "error": "Could not geocode address"}
+        lat, lng = coords
 
-    lat, lng = coords
     print(f"Searching for medical shops near {address} at coords ({lat}, {lng}) with radius {radius_m}m")
 
     # Using Google Places API Text Search (New) endpoint

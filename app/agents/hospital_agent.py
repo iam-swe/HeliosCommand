@@ -78,9 +78,14 @@ class HospitalAnalyserAgent(BaseAgent):
             state_keys=list(state.keys()) if state else None,
         )
 
-        # Perform hospital lookup
-        logger.info("Performing hospital lookup", query=query)
-        result = find_nearest_hospital(query, api_key)
+        # Get pre-computed address and coordinates from state (set by orchestrator)
+        address = (state.get("user_address") if state else None) or query
+        user_lat = state.get("user_latitude") if state else None
+        user_lng = state.get("user_longitude") if state else None
+
+        # Perform hospital lookup using address from state
+        logger.info("Performing hospital lookup", address=address, user_lat=user_lat, user_lng=user_lng)
+        result = find_nearest_hospital(address, api_key, user_lat=user_lat, user_lng=user_lng)
 
         if not result.get("success"):
             logger.warning("Hospital lookup failed", result=result)

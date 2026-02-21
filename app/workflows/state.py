@@ -17,6 +17,10 @@ class HeliosState(TypedDict):
     current_response: Optional[str]
     error: List[str]
     orchestrator_result: Optional[str]
+    user_address: Optional[str]
+    user_latitude: Optional[float]
+    user_longitude: Optional[float]
+    google_earth_link: Optional[str]
 
 
 def get_conversation_context(state: HeliosState, max_messages: int = 6) -> str:
@@ -45,4 +49,8 @@ def get_initial_state() -> HeliosState:
         current_response=None,
         error=[],
         orchestrator_result=None,
+        user_address=None,
+        user_latitude=None,
+        user_longitude=None,
+        google_earth_link=None,
     )

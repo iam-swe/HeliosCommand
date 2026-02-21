@@ -7,6 +7,7 @@ to route user queries to the appropriate agent tools.
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any, Dict
 
 import structlog
@@ -14,6 +15,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.prebuilt import create_react_agent
 
 from app.tools.agent_tools import get_agent_tools, set_current_messages
+from app.utils.geo import geocode_address, google_earth_link
 from app.workflows.state import HeliosState
 
 if TYPE_CHECKING:
@@ -72,6 +74,67 @@ class OrchestratorNode:
             return "\n".join(parts)
         return str(content)
 
+    def _geocode_from_messages(self, state: HeliosState) -> Dict[str, Any]:
+        """Extract address from conversation and geocode it.
+
+        Returns dict with user_address, user_latitude, user_longitude, google_earth_link
+        (values may be None if geocoding fails).
+        """
+        # Already geocoded in this session
+        if state.get("user_latitude") is not None and state.get("user_longitude") is not None:
+            return {
+                "user_address": state.get("user_address"),
+                "user_latitude": state["user_latitude"],
+                "user_longitude": state["user_longitude"],
+                "google_earth_link": state.get("google_earth_link"),
+            }
+
+        # Collect all human messages to find an address
+        all_text = []
+        for msg in state.get("messages", []):
+            if isinstance(msg, HumanMessage):
+                all_text.append(msg.content)
+
+        if not all_text:
+            return {"user_address": None, "user_latitude": None, "user_longitude": None, "google_earth_link": None}
+
+        # Use the LLM to extract an address from conversation
+        conversation = "\n".join(all_text)
+        extract_prompt = (
+            "From the following conversation messages extract only the physical "
+            "address or location mentioned by the user. Return ONLY the address "
+            "string, nothing else. If no address is found return NONE.\n\n"
+            f"{conversation}"
+        )
+
+        try:
+            resp = self.orchestrator_agent.model.invoke(extract_prompt)
+            address = resp.content.strip()
+            if not address or address.upper() == "NONE":
+                logger.info("No address found in conversation")
+                return {"user_address": None, "user_latitude": None, "user_longitude": None, "google_earth_link": None}
+
+            logger.info("Extracted address for geocoding", address=address)
+            api_key = os.environ.get("GOOGLE_MAPS_KEY", "")
+            coords = geocode_address(address, api_key)
+
+            if coords is None:
+                logger.warning("Geocoding failed for address", address=address)
+                return {"user_address": address, "user_latitude": None, "user_longitude": None, "google_earth_link": None}
+
+            lat, lng = coords
+            earth_link = google_earth_link(lat, lng)
+            logger.info("Geocoded successfully", lat=lat, lng=lng, earth_link=earth_link)
+            return {
+                "user_address": address,
+                "user_latitude": lat,
+                "user_longitude": lng,
+                "google_earth_link": earth_link,
+            }
+        except Exception as e:
+            logger.error("Address extraction / geocoding failed", error=str(e))
+            return {"user_address": None, "user_latitude": None, "user_longitude": None, "google_earth_link": None}
+
     def process(self, state: HeliosState) -> Dict[str, Any]:
         """Process the current state through the orchestrator using create_react_agent."""
         try:
@@ -92,16 +155,28 @@ class OrchestratorNode:
                     ],
                     "user_intent": state.get("user_intent", "unknown"),
                     "orchestrator_result": "Thanks for confirming. Take care and get well soon!",
+                    "user_address": state.get("user_address"),
+                    "user_latitude": state.get("user_latitude"),
+                    "user_longitude": state.get("user_longitude"),
+                    "google_earth_link": state.get("google_earth_link"),
                 }
             
             if confirmation == "no":
                 logger.info("User declined, routing to email agent")
                 # User said no, route to send_email tool
                 current_intent = state.get("user_intent", "unknown")
+
+                # Geocode address before delegating
+                geo_data = self._geocode_from_messages(state)
+                state["user_address"] = geo_data["user_address"]
+                state["user_latitude"] = geo_data["user_latitude"]
+                state["user_longitude"] = geo_data["user_longitude"]
+                state["google_earth_link"] = geo_data["google_earth_link"]
+
                 tools = get_agent_tools()
                 prompt = self.orchestrator_agent.get_prompt(state)
 
-                set_current_messages(state.get("messages", []))
+                set_current_messages(state.get("messages", []), state)
                 agent = create_react_agent(
                     self.orchestrator_agent.model,
                     tools,
@@ -127,6 +202,10 @@ class OrchestratorNode:
                     "messages": result.get("messages", []),
                     "user_intent": current_intent,
                     "orchestrator_result": orchestrator_response,
+                    "user_address": state.get("user_address"),
+                    "user_latitude": state.get("user_latitude"),
+                    "user_longitude": state.get("user_longitude"),
+                    "google_earth_link": state.get("google_earth_link"),
                 }
 
             # Detect intent
@@ -134,12 +213,19 @@ class OrchestratorNode:
             if current_intent == "unknown" and user_msg:
                 current_intent = _detect_intent(user_msg)
 
+            # Geocode the user's address and store in state
+            geo_data = self._geocode_from_messages(state)
+            state["user_address"] = geo_data["user_address"]
+            state["user_latitude"] = geo_data["user_latitude"]
+            state["user_longitude"] = geo_data["user_longitude"]
+            state["google_earth_link"] = geo_data["google_earth_link"]
+
             # Get tools and prompt from the orchestrator agent
             tools = get_agent_tools()
             prompt = self.orchestrator_agent.get_prompt(state)
 
             # Make conversation messages available to agent tools
-            set_current_messages(state.get("messages", []))
+            set_current_messages(state.get("messages", []), state)
 
             # Create and invoke the ReAct agent
             agent = create_react_agent(
@@ -168,6 +254,10 @@ class OrchestratorNode:
                 "messages": result.get("messages", []),
                 "user_intent": current_intent,
                 "orchestrator_result": orchestrator_response,
+                "user_address": state.get("user_address"),
+                "user_latitude": state.get("user_latitude"),
+                "user_longitude": state.get("user_longitude"),
+                "google_earth_link": state.get("google_earth_link"),
             }
 
         except Exception as e:
