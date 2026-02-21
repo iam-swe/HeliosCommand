@@ -35,6 +35,3 @@ def send_email(to_address: str, subject: str, body: str) -> Dict[str, str]:
         return {"success": False, "error": f"Gmail API error: {resp.text}"}
 
     return {"success": True, "result": resp.json()}
-from tools.email_tool import send_email
-
-__all__ = ["send_email"]

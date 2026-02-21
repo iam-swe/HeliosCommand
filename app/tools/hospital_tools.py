@@ -26,7 +26,11 @@ def _haversine(lat1, lon1, lat2, lon2):
     return R * c
 
 
-def _geocode_address(address: str, api_key: str) -> Optional[Tuple[float, float]]:
+def _geocode_address(address: str) -> Optional[Tuple[float, float]]:
+    api_key = os.environ.get("GOOGLE_MAPS_KEY")
+    if not api_key:
+        return None
+
     url = "https://maps.googleapis.com/maps/api/geocode/json"
     params = {"address": address, "key": api_key}
     resp = requests.get(url, params=params, timeout=10)
@@ -63,7 +67,7 @@ def find_nearest_hospital(address: str, google_api_key: str) -> Dict[str, Any]:
     if not google_api_key:
         raise ValueError("GOOGLE_API_KEY is required")
 
-    coords = _geocode_address(address, google_api_key)
+    coords = _geocode_address(address)
     if coords is None:
         return {"success": False, "error": "Could not geocode address"}
 
@@ -96,33 +100,41 @@ def search_medical_shops_nearby(address: str, google_api_key: str, radius_m: int
     if not google_api_key:
         raise ValueError("GOOGLE_API_KEY is required")
 
-    coords = _geocode_address(address, google_api_key)
+    coords = _geocode_address(address)
     if coords is None:
         return {"success": False, "error": "Could not geocode address"}
 
     lat, lng = coords
+    print(f"Searching for medical shops near {address} at coords ({lat}, {lng}) with radius {radius_m}m")
 
-    url = "https://places.googleapis.com/v1/places:searchNearby"
+    # Using Google Places API Text Search (New) endpoint
+    url = "https://places.googleapis.com/v1/places:searchText"
     body = {
-        "location": {"lat": lat, "lng": lng},
-        "radius": radius_m,
-        "query": "medical shop|pharmacy|medical store",
+        "textQuery": "pharmacy medical shop drugstore",
+        "locationBias": {
+            "circle": {
+                "center": {"latitude": lat, "longitude": lng},
+                "radius": radius_m
+            }
+        },
+        "openNow": True,
+        "rankPreference": "DISTANCE",
+        "pageSize": 10,
     }
 
-    params = {"key": google_api_key}
-    resp = requests.post(url, params=params, json=body, timeout=10)
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": google_api_key,
+        "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location,places.types,places.currentOpeningHours",
+    }
+    
+    resp = requests.post(url, headers=headers, json=body, timeout=10)
     try:
         resp.raise_for_status()
-    except Exception:
+    except Exception as e:
         return {"success": False, "error": f"Places API error: {resp.text}"}
 
     data = resp.json()
-    results = data.get("results") or data.get("candidates") or []
+    results = data.get("places") or []
+    print(f"Lat lng: ({lat}, {lng}), API returned {len(results)} places")
     return {"success": True, "user_coords": {"lat": lat, "lng": lng}, "places": results}
-"""Wrapper module mirroring top-level tools for app package."""
-from tools.hospital_tools import (
-    find_nearest_hospital,
-    search_medical_shops_nearby,
-)
-
-__all__ = ["find_nearest_hospital", "search_medical_shops_nearby"]

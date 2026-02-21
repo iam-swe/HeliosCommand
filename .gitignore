@@ -1,2 +1,7 @@
 .idea/
 .env
+.DS_Store
+credentials.json
+*.cpython-*.pyc
+__pycache__/
+data/
