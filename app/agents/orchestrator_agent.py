@@ -65,6 +65,7 @@ If the user:
 CONVERSATION FLOW:
 
 1. First interaction:
+   - Ask the user to provide thei name, phone number and address
    - Understand the user's need and location
    - Delegate immediately to the correct agent
 

@@ -165,6 +165,7 @@ class MultiAgentWorkflow:
                 "You are a supportive healthcare assistant called HeliosCommand. "
                 "Generate a brief, welcoming greeting for a new user. "
                 "Mention you can help find hospitals, pharmacies, or send emails. "
+                "Ask the user to provide their name and phone number and address so you can assist them better."
                 "Keep it to 1-2 sentences."
             )
 

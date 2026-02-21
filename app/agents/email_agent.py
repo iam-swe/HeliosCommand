@@ -30,6 +30,7 @@ URGENCY RULES:
 - If the patient needs medicines/pharmacy/medical shop → convey that they seek medications as soon as possible
 
 EMAIL RULES:
+- Extract the patient's name and phone number from the conversation — include them in the email
 - Extract patient address/location from conversation — include it in the email
 - Do NOT include patient name or regards/sign-off name — just the address is enough
 - Be direct and urgent
@@ -40,6 +41,8 @@ URGENT: Emergency Hospital Bed Required|Dear Healthcare Administrator,
 
 This is an urgent request for immediate emergency assistance with hospital bed availability.
 
+Patient Name: John Doe
+Patient Phone: 9876543210
 Patient Address: Shivasunder hospital area, Shastri Nagar, Adyar, Chennai
 Requirement: 1 hospital bed — immediate emergency help needed
 
@@ -125,6 +128,7 @@ CONVERSATION:
 {conversation_context}
 
 RULES:
+- Extract the patient's name and phone number from the conversation context
 - Extract the patient's address/location from the conversation
 - If they need hospital beds/ICU/emergency → state they need IMMEDIATE EMERGENCY help for beds
 - If they need medicines/pharmacy → state they seek medications as soon as possible
@@ -139,6 +143,8 @@ URGENT: Emergency Hospital Bed Required|Dear Healthcare Administrator,
 
 This is an urgent request for immediate emergency assistance with hospital bed availability.
 
+Patient Name: John Doe
+Patient Phone: 9876543210
 Patient Address: Shivasunder hospital area, Shastri Nagar, Adyar, Chennai
 Requirement: 1 hospital bed — immediate emergency help needed
 
