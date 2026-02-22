@@ -99,7 +99,7 @@ class HospitalAnalyserAgent(BaseAgent):
         nearest = result.get("nearest") or {}
         distance = result.get("distance_km")
         eta = result.get("eta_minutes")
-        name = nearest.get("Name") or nearest.get("name") or "Nearest Hospital"
+        name = nearest.get("Hospital Name") or nearest.get("Name") or nearest.get("name") or "Nearest Hospital"
 
         message = (
             f"I found a hospital near you!\n\n"

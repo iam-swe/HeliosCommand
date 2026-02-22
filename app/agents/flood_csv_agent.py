@@ -30,21 +30,18 @@ river_flow_rate_m3s, soil_moisture_percent, temperature_celsius,
 humidity_percent, alert_status, place, latitude, longitude.
 
 YOUR TASK:
-1. Identify the places that face the MAXIMUM flood risk.
-2. For each risky place, compute an aggregate severity score based on:
-   - Peak water level (higher → worse)
-   - Peak rainfall (higher → worse)
-   - River flow rate (higher → worse)
-   - Soil moisture (higher → worse, saturated soil cannot absorb more)
-   - Number of "Danger" and "Flood" alert readings
-3. Rank the places from most to least severe.
+1. Quickly scan the data to identify the places that face the MAXIMUM flood risk.
+2. Rank the places from most to least severe based on high water level, rainfall,
+   river flow, and "Danger" readings.
+3. CRITICAL: Do NOT output step-by-step calculations or list every location.
+   ONLY output the final top 5 most severe places to save time.
 4. For the top 5 most severe places, provide:
    - Place name
    - Latitude, Longitude
    - Peak water level (m), Peak rainfall (mm/hr)
    - Number of Flood/Danger readings
    - Overall severity: CRITICAL / HIGH / MODERATE
-5. Return the analysis in a clear, structured format.
+5. Return the analysis in a short, structured format. Keep it extremely brief.
 
 IMPORTANT: Be precise with numbers. Do not fabricate data.
 

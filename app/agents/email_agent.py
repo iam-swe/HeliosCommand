@@ -141,24 +141,25 @@ CONVERSATION:
 RULES:
 - Extract the patient's name and phone number from the conversation context
 - Extract the patient's address/location from the conversation
-- If they need hospital beds/ICU/emergency → state they need IMMEDIATE EMERGENCY help for beds
-- If they need medicines/pharmacy → state they seek medications as soon as possible
+- CRITICAL: Determine the exact need from the conversation.
+  - If they need hospital beds/ICU/emergency → state they need IMMEDIATE EMERGENCY help for beds
+  - If they need medicines/pharmacy/tablets → state they seek medications as soon as possible
 - Do NOT include any patient name or regards/sign-off name — just the patient address
 - Be direct and convey urgency{earth_link_instruction}
 
 IMPORTANT: Return ONLY in this exact format with no additional text:
 SUBJECT|BODY
 
-Example:
-URGENT: Emergency Hospital Bed Required|Dear Healthcare Administrator,
+Example Format (Fill in the bracketed info based on the actual need):
+URGENT: Request for [Specific Need]|Dear Healthcare Administrator,
 
-This is an urgent request for immediate emergency assistance with hospital bed availability.
+This is an urgent request for immediate assistance regarding [Specific Need].
 
-Patient Name: John Doe
-Patient Phone: 9876543210
-Patient Address: Shivasunder hospital area, Shastri Nagar, Adyar, Chennai
-Requirement: 1 hospital bed — immediate emergency help needed
-Patient Location (Map): https://earth.google.com/web/@13.0067,80.2206,100a,0d,45y,0h,0t,0r
+Patient Name: [Name]
+Patient Phone: [Phone]
+Patient Address: [Address]
+Requirement: [State the exact medication or hospital need]
+[Patient Location Map if provided]
 
 Please respond at the earliest with available options in this area."""
 
