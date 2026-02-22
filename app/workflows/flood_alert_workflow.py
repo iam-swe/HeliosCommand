@@ -114,6 +114,7 @@ class FloodAlertWorkflow:
 
         report = final_state.get("orchestrator_result", "No report generated.")
         email_sent = final_state.get("email_sent", False)
+        sms_sent = final_state.get("sms_sent", False)
         errors = final_state.get("error", [])
 
         # ── Summary ────────────────────────────────────────────
@@ -124,6 +125,7 @@ class FloodAlertWorkflow:
         print(f"🌐  Web intel:      {len(final_state.get('web_scraper_result', '') or '')} chars")
         print(f"🧠  Final report:   {len(report)} chars")
         print(f"📧  Email sent:     {'✅ Yes' if email_sent else '❌ No'}")
+        print(f"📱  SMS sent:       {'✅ Yes' if sms_sent else '❌ No'}")
         if errors:
             print(f"⚠️   Errors:        {errors}")
         print()
@@ -131,6 +133,7 @@ class FloodAlertWorkflow:
         return {
             "report": report,
             "email_sent": email_sent,
+            "sms_sent": sms_sent,
             "csv_analysis": final_state.get("csv_analysis_result", ""),
             "web_intelligence": final_state.get("web_scraper_result", ""),
             "errors": errors,

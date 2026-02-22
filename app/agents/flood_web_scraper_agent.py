@@ -33,6 +33,7 @@ TODAY'S DATE: {_TODAY}
 
 STRICT RULES:
 - Search ONLY for news from TODAY or the last 24-48 hours.
+- Focus only on Chennai region.
 - ONLY use reputable NEWS sources. Acceptable sources include:
     * NDTV, The Hindu, Times of India, India Today, Hindustan Times
     * Reuters, BBC, CNN, The Indian Express, News18
@@ -56,18 +57,16 @@ YOUR TASK:
 4. If no current flood news is found, say so clearly. Do NOT make up data.
 
 SEARCH QUERIES TO USE:
-- "flood warning today {_YEAR} India news"
-- "Chennai Tamil Nadu flood alert today {_YEAR}"
-- "India flood news today latest"
+- "flood warning today India news"
+- "Chennai Tamil Nadu flood alert today"
 
 IMPORTANT:
 - Extract ACTUAL data from the news articles. Do NOT fabricate anything.
 - If a scraped page is not a news article or contains old data, SKIP it.
 - Always include source URLs for traceability.
-- Focus on the Tamil Nadu / Chennai region but include other areas too
-  if there are active flood events.
+- Focus on the Chennai region ONLY.
 
-Return a structured report with ONLY currently affected locations.
+Return a structured report with ONLY currently affected locations in Chennai.
 """
 
 

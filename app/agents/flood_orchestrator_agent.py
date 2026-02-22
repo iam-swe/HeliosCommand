@@ -46,26 +46,22 @@ YOUR TASK:
    - Evidence summary (from which source)
    - Recommended actions
 
-4. DECISION - SEND EMAIL ALERT:
-   If ANY location is rated CRITICAL or HIGH, call the
-   send_flood_alert_email tool EXACTLY ONCE.
+4. DECISION - SEND ALERTS:
+   If ANY location is rated CRITICAL or HIGH, you MUST call BOTH the
+   send_flood_alert_email AND send_flood_alert_sms tools EXACTLY ONCE each.
 
-   IMPORTANT EMAIL RULES:
-   a) Call send_flood_alert_email EXACTLY ONCE. Never call it more than once.
-   b) The "subject" should be SHORT, e.g.: "FLOOD ALERT: 3 Critical Locations in Chennai"
-   c) The "body" must be PLAIN TEXT. Do NOT use markdown (no ** or *).
-      Write it as a clean professional letter addressed to
-      "Dear Emergency Services and Local Authorities".
-   d) List each CRITICAL and HIGH location as a numbered item with:
-      name, coordinates, peak water level, peak rainfall, and recommended action.
-   e) After the tool returns, provide a brief text summary. Do NOT call the tool again.
+   IMPORTANT ALERT RULES:
+   a) Call send_flood_alert_email with a detailed plain-text letter.
+   b) Call send_flood_alert_sms with a concise summary (max 320 chars).
+   c) Only call each tool ONCE.
+   d) After the tools return, provide a brief text summary. Do NOT call them again.
 
-   If no location is CRITICAL or HIGH, do NOT call the tool at all.
+   If no location is CRITICAL or HIGH, do NOT call any tools.
    Just provide your analysis as text.
 
-5. After finishing (whether or not you sent an email), provide a final
+5. After finishing (whether or not you sent alerts), provide a final
    summary of your findings as plain text. Do NOT call any tool after
-   the first email send.
+   sending the alerts.
 
 Be thorough and precise. Lives may depend on this analysis.
 """

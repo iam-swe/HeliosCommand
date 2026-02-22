@@ -174,7 +174,12 @@ def run_flood_alert_workflow(csv_weight: float = 0.5) -> None:
     if result.get("email_sent"):
         print("  📧  EMAIL ALERT: ✅ Sent successfully")
     else:
-        print("  📧  EMAIL ALERT: ❌ Not triggered (no CRITICAL/HIGH severity)")
+        print("  📧  EMAIL ALERT: ❌ Not triggered")
+
+    if result.get("sms_sent"):
+        print("  📱  SMS ALERT:   ✅ Sent successfully")
+    else:
+        print("  📱  SMS ALERT:   ❌ Not triggered")
 
     if result.get("errors"):
         print(f"  ⚠️  Errors: {result['errors']}")

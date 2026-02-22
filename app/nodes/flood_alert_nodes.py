@@ -120,6 +120,7 @@ def flood_orchestrator_node(state: FloodAlertState) -> Dict[str, Any]:
     """
     from app.agents.flood_orchestrator_agent import FloodOrchestratorAgent
     from app.tools.flood_email_tool import get_flood_email_tools
+    from app.tools.flood_sms_tool import get_flood_sms_tools
 
     _log_step("🧠", "ORCHESTRATOR", "Starting — both parallel agents have completed")
     t0 = time.time()
@@ -135,9 +136,9 @@ def flood_orchestrator_node(state: FloodAlertState) -> Dict[str, Any]:
 
     _log_step("🧠", "ORCHESTRATOR", "Building prompt with combined data from both agents …")
     prompt = agent_instance.get_prompt(state)
-    tools = get_flood_email_tools()
+    tools = get_flood_email_tools() + get_flood_sms_tools()
 
-    _log_step("🧠", "ORCHESTRATOR", "Creating ReAct agent with email alert tool (max 10 steps) …")
+    _log_step("🧠", "ORCHESTRATOR", "Creating ReAct agent with email and SMS alert tools (max 10 steps) …")
     react_agent = create_react_agent(
         agent_instance.model,
         tools,
@@ -152,9 +153,9 @@ def flood_orchestrator_node(state: FloodAlertState) -> Dict[str, Any]:
                     content=(
                         "Analyse the flood data from both sources and produce "
                         "a consolidated flood risk report. If any location is "
-                        "CRITICAL or HIGH severity, call send_flood_alert_email "
-                        "EXACTLY ONCE with a plain-text body (no markdown). "
-                        "After sending, do NOT call the tool again — just provide "
+                        "CRITICAL or HIGH severity, call BOTH send_flood_alert_email "
+                        "and send_flood_alert_sms exactly ONCE each. "
+                        "After sending, do NOT call the tools again — just provide "
                         "a brief summary of what was sent."
                     )
                 ),
@@ -166,17 +167,25 @@ def flood_orchestrator_node(state: FloodAlertState) -> Dict[str, Any]:
     # Extract the final response
     orchestrator_response = ""
     email_sent = False
+    sms_sent = False
 
     _log_step("🧠", "ORCHESTRATOR", "Parsing agent response messages …")
 
-    # Check for tool calls (email)
+    # Check for tool calls (email and SMS)
     for msg in result.get("messages", []):
         if isinstance(msg, ToolMessage) and msg.content:
-            if "sent successfully" in msg.content:
-                email_sent = True
-                _log_step("📧", "ORCHESTRATOR", f"Email tool returned: {msg.content}")
-            elif "Failed" in msg.content or "ERROR" in msg.content:
-                _log_step("⚠️", "ORCHESTRATOR", f"Email tool error: {msg.content}")
+            if msg.name == "send_flood_alert_email":
+                if "successfully" in msg.content:
+                    email_sent = True
+                    _log_step("📧", "ORCHESTRATOR", f"Email tool returned: {msg.content}")
+                else:
+                    _log_step("⚠️", "ORCHESTRATOR", f"Email tool error: {msg.content}")
+            elif msg.name == "send_flood_alert_sms":
+                if "successfully" in msg.content:
+                    sms_sent = True
+                    _log_step("📱", "ORCHESTRATOR", f"SMS tool returned: {msg.content}")
+                else:
+                    _log_step("⚠️", "ORCHESTRATOR", f"SMS tool error: {msg.content}")
 
     for msg in reversed(result.get("messages", [])):
         if isinstance(msg, AIMessage) and msg.content and not getattr(msg, "tool_calls", None):
@@ -191,8 +200,8 @@ def flood_orchestrator_node(state: FloodAlertState) -> Dict[str, Any]:
 
     elapsed = round(time.time() - t0, 1)
 
-    if email_sent:
-        _log_step("🚨", "ORCHESTRATOR", f"ALERT EMAIL SENT — severe flood locations detected! ({elapsed}s)")
+    if email_sent or sms_sent:
+        _log_step("🚨", "ORCHESTRATOR", f"ALERTS SENT — severe flood locations detected! ({elapsed}s)")
     else:
         _log_step("✅", "ORCHESTRATOR", f"Analysis complete in {elapsed}s — no severe alerts triggered")
 
@@ -201,5 +210,6 @@ def flood_orchestrator_node(state: FloodAlertState) -> Dict[str, Any]:
     return {
         "orchestrator_result": orchestrator_response,
         "email_sent": email_sent,
+        "sms_sent": sms_sent,
         "messages": result.get("messages", []),
     }

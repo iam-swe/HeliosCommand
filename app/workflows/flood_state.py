@@ -24,6 +24,7 @@ class FloodAlertState(TypedDict):
     # Orchestrator final output
     orchestrator_result: Optional[str]
     email_sent: bool
+    sms_sent: bool
 
     # operator.add concatenates lists from parallel nodes
     error: Annotated[List[str], operator.add]
@@ -39,5 +40,6 @@ def get_initial_flood_state(csv_weight: float = 0.5) -> FloodAlertState:
         web_scraper_result=None,
         orchestrator_result=None,
         email_sent=False,
+        sms_sent=False,
         error=[],
     )
