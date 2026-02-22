@@ -1,11 +1,17 @@
 """Main entry point for HeliosCommand — Healthcare Assistant.
 
-This CLI demonstrates the multi-agentic workflow that coordinates:
-  - Hospital finder (HospitalAnalyserAgent)
-  - Medical shop locator (MedicalShopAgent)
-  - Email sender (via Gmail API)
+This CLI demonstrates two multi-agentic workflows:
 
-All routed by the OrchestratorAgent using LangGraph's create_react_agent.
+1. Healthcare Assistant (interactive):
+   - Hospital finder (HospitalAnalyserAgent)
+   - Medical shop locator (MedicalShopAgent)
+   - Email sender (via Gmail API)
+   All routed by the OrchestratorAgent using LangGraph's create_react_agent.
+
+2. Flood Alert System (--flood-alert):
+   - CSV Analyst Agent — analyses flood_detection_data.csv in parallel
+   - Web Scraper Agent — scrapes flood intel from web & social media in parallel
+   - Flood Orchestrator — combines results & sends email alert if severe
 """
 
 import os
@@ -37,6 +43,7 @@ except ImportError:
 from app.agents.orchestrator_agent import OrchestratorAgent
 from app.nodes.orchestrator_node import OrchestratorNode
 from app.workflows import MultiAgentWorkflow
+from app.workflows.flood_alert_workflow import run_flood_alert
 
 
 def create_app(conversation_id=None):
@@ -106,22 +113,98 @@ def start_session(conversation_id=None) -> None:
     run_interactive(conversation_id)
 
 
+def run_flood_alert_workflow(csv_weight: float = 0.5) -> None:
+    """Run the Flood Alert parallel multi-agent workflow.
+
+    Two agents run in parallel:
+      1. CSV Analyst — analyses flood sensor data
+      2. Web Scraper — scrapes flood intel from web & social media
+
+    Their outputs feed into the Flood Orchestrator which
+    cross-references the data and sends an email alert if
+    any location is rated CRITICAL or HIGH severity.
+    """
+    print("\n" + "═" * 70)
+    print("  🌊  HeliosCommand — FLOOD ALERT SYSTEM")
+    print("═" * 70)
+    print()
+    print("  Running TWO agents in PARALLEL:")
+    print(f"  📊 Agent 1: CSV Sensor Data Analyst (Weight: {csv_weight * 100:.0f}%)")
+    web_weight = max(0.0, 1.0 - csv_weight)
+    print(f"  🌐 Agent 2: Web News Scraper          (Weight: {web_weight * 100:.0f}%)")
+    print()
+    print("  Both feed into the Flood Orchestrator which")
+    print("  analyses severity and sends email alerts if needed.")
+    print()
+    print("─" * 70)
+    print()
+
+    result = run_flood_alert(csv_weight=csv_weight)
+
+    # ── Display results ──────────────────────────────────────
+    print("\n" + "═" * 70)
+    print("  📋  FINAL FLOOD RISK REPORT")
+    print("═" * 70)
+    print()
+
+    print("─── CSV Analysis Summary ───")
+    csv_summary = result.get("csv_analysis", "N/A")
+    if len(csv_summary) > 500:
+        print(csv_summary[:500] + "…\n(truncated for display)")
+    else:
+        print(csv_summary)
+
+    print()
+    print("─── Web Intelligence Summary ───")
+    web_summary = result.get("web_intelligence", "N/A")
+    if len(web_summary) > 500:
+        print(web_summary[:500] + "…\n(truncated for display)")
+    else:
+        print(web_summary)
+
+    print()
+    print("═" * 70)
+    print("  🧠  ORCHESTRATOR ANALYSIS")
+    print("═" * 70)
+    print()
+    print(result.get("report", "No report generated."))
+
+    print()
+    print("─" * 70)
+    if result.get("email_sent"):
+        print("  📧  EMAIL ALERT: ✅ Sent successfully")
+    else:
+        print("  📧  EMAIL ALERT: ❌ Not triggered (no CRITICAL/HIGH severity)")
+
+    if result.get("errors"):
+        print(f"  ⚠️  Errors: {result['errors']}")
+
+    print("─" * 70)
+    print()
+
+
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="HeliosCommand — Healthcare Assistant",
+        description="HeliosCommand — Healthcare Assistant & Flood Alert System",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   python -m app.main
-    Start interactive session
+    Start interactive healthcare session
 
   python -m app.main "nearest hospital in Adyar"
     Query hospital finder
 
   python -m app.main "pharmacies near Velachery"
     Query medical shop locator
+
+  python -m app.main --flood-alert
+    Run the parallel flood alert analysis workflow
+
+  python -m app.main --flood-alert --csv-weight 0.8
+    Run flood alert giving 80% weight to CSV sensor data
         """,
     )
 
@@ -134,10 +217,23 @@ Examples:
         "--conversation-id",
         help="Resume existing conversation by ID",
     )
+    parser.add_argument(
+        "--flood-alert",
+        action="store_true",
+        help="Run the Flood Alert parallel multi-agent workflow",
+    )
+    parser.add_argument(
+        "--csv-weight",
+        type=float,
+        default=0.5,
+        help="Weight to assign to CSV data (0.0 to 1.0). Default is 0.5 (equal weight).",
+    )
 
     args = parser.parse_args()
 
-    if args.query:
+    if args.flood_alert:
+        run_flood_alert_workflow(csv_weight=args.csv_weight)
+    elif args.query:
         result = run(args.query, conversation_id=args.conversation_id)
         print(f"\nAssistant: {result}\n")
     else:
